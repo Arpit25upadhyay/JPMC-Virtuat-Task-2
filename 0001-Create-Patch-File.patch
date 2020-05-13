@@ -1,0 +1,384 @@
+From 519e0752ca3cc55f5b1ba4a8a5d033730f422287 Mon Sep 17 00:00:00 2001
+From: Arpit Upadhyay <arpitupadhyay254@gmail.com>
+Date: Thu, 14 May 2020 02:06:06 +0530
+Subject: [PATCH] Create Patch File
+
+---
+ App.css            | 49 ++++++++++++++++++++++++++
+ App.test.js        |  9 +++++
+ App.tsx            | 87 ++++++++++++++++++++++++++++++++++++++++++++++
+ DataStreamer.ts    | 40 +++++++++++++++++++++
+ Graph.css          |  4 +++
+ Graph.tsx          | 81 ++++++++++++++++++++++++++++++++++++++++++
+ index.css          | 14 ++++++++
+ index.tsx          | 14 ++++++++
+ react-app-env.d.ts |  1 +
+ 9 files changed, 299 insertions(+)
+ create mode 100644 App.css
+ create mode 100644 App.test.js
+ create mode 100644 App.tsx
+ create mode 100644 DataStreamer.ts
+ create mode 100644 Graph.css
+ create mode 100644 Graph.tsx
+ create mode 100644 index.css
+ create mode 100644 index.tsx
+ create mode 100644 react-app-env.d.ts
+
+diff --git a/App.css b/App.css
+new file mode 100644
+index 0000000..1a8747a
+--- /dev/null
++++ b/App.css
+@@ -0,0 +1,49 @@
++.App {
++  text-align: center;
++  min-height: 100vh;
++}
++
++.App-logo {
++  animation: App-logo-spin infinite 20s linear;
++  height: 40vmin;
++}
++
++.App-header {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  justify-content: center;
++  font-size: calc(10px + 2vmin);
++  margin-bottom: 12px;
++}
++
++.App-link {
++  color: #61dafb;
++}
++
++.App-content {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  justify-content: center;
++  margin-bottom: 12px;
++}
++
++.Stream-button {
++  margin-bottom: 12px;
++}
++
++.Graph {
++  min-height: 50vh;
++  width: 700px;
++  margin-bottom: 12px;
++}
++
++@keyframes App-logo-spin {
++  from {
++    transform: rotate(0deg);
++  }
++  to {
++    transform: rotate(360deg);
++  }
++}
+diff --git a/App.test.js b/App.test.js
+new file mode 100644
+index 0000000..a754b20
+--- /dev/null
++++ b/App.test.js
+@@ -0,0 +1,9 @@
++import React from 'react';
++import ReactDOM from 'react-dom';
++import App from './App';
++
++it('renders without crashing', () => {
++  const div = document.createElement('div');
++  ReactDOM.render(<App />, div);
++  ReactDOM.unmountComponentAtNode(div);
++});
+diff --git a/App.tsx b/App.tsx
+new file mode 100644
+index 0000000..2a16005
+--- /dev/null
++++ b/App.tsx
+@@ -0,0 +1,87 @@
++import React, { Component } from 'react';
++import DataStreamer, { ServerRespond } from './DataStreamer';
++import Graph from './Graph';
++import './App.css';
++
++/**
++ * State declaration for <App />
++ */
++interface IState {
++  data: ServerRespond[],
++  showGraph: boolean,
++}
++
++/**
++ * The parent element of the react app.
++ * It renders title, button and Graph react element.
++ */
++class App extends Component<{}, IState> {
++  constructor(props: {}) {
++    super(props);
++
++    this.state = {
++      // data saves the server responds.
++      // We use this state to parse data down to the child element (Graph) as element property
++      data: [],
++      showGraph: false,
++    };
++  }
++
++  /**
++   * Render Graph react component with state.data parse as property data
++   */
++  renderGraph() {
++    if (this.state.showGraph)
++    {
++    return(<Graph data={this.state.data})
++    }
++  }
++
++  /**
++   * Get new data from server and update the state with the new data
++   */
++  getDataFromServer() {
++    let x=0;
++    const interval = setInterval(() =>{
++    DataStreamer.getData((serverResponds: ServerRespone[])=>{
++    this.setState({
++    data: serverResponds,
++    showGraph: true,
++    });
++    });
++    x++
++    if(x>1000){
++    clearInterval(interval);
++    }
++    },100)
++  }
++
++  /**
++   * Render the App react component
++   */
++  render() {
++    return (
++      <div className="App">
++        <header className="App-header">
++          Bank & Merge Co Task 2
++        </header>
++        <div className="App-content">
++          <button className="btn btn-primary Stream-button"
++            // when button is click, our react app tries to request
++            // new data from the server.
++            // As part of your task, update the getDataFromServer() function
++            // to keep requesting the data every 100ms until the app is closed
++            // or the server does not return anymore data.
++            onClick={() => {this.getDataFromServer()}}>
++            Start Streaming Data
++          </button>
++          <div className="Graph">
++            {this.renderGraph()}
++          </div>
++        </div>
++      </div>
++    )
++  }
++}
++
++export default App;
+diff --git a/DataStreamer.ts b/DataStreamer.ts
+new file mode 100644
+index 0000000..78583cb
+--- /dev/null
++++ b/DataStreamer.ts
+@@ -0,0 +1,40 @@
++export interface Order {
++  price: Number,
++  size: Number,
++}
++/**
++ * The datafeed server returns an array of ServerRespond with 2 stocks.
++ * We do not have to manipulate the ServerRespond for the purpose of this task.
++ */
++export interface ServerRespond {
++  stock: string,
++  top_bid: Order,
++  top_ask: Order,
++  timestamp: Date,
++}
++
++class DataStreamer {
++  // The url where datafeed server is listening
++  static API_URL: string = 'http://localhost:8080/query?id=1';
++
++  /**
++   * Send request to the datafeed server and executes callback function on success
++   * @param callback callback function that takes JSON object as its argument
++   */
++  static getData(callback: (data: ServerRespond[]) => void): void {
++    const request = new XMLHttpRequest();
++    request.open('GET', DataStreamer.API_URL, false);
++
++    request.onload = () => {
++      if (request.status === 200) {
++        callback(JSON.parse(request.responseText));
++      } else {
++        alert ('Request failed');
++      }
++    }
++
++    request.send();
++  }
++}
++
++export default DataStreamer;
+\ No newline at end of file
+diff --git a/Graph.css b/Graph.css
+new file mode 100644
+index 0000000..c77c560
+--- /dev/null
++++ b/Graph.css
+@@ -0,0 +1,4 @@
++perspective-viewer {
++  height: 50vh;
++  width: 700px;
++}
+\ No newline at end of file
+diff --git a/Graph.tsx b/Graph.tsx
+new file mode 100644
+index 0000000..f43f880
+--- /dev/null
++++ b/Graph.tsx
+@@ -0,0 +1,81 @@
++import React, { Component } from 'react';
++import { Table } from '@jpmorganchase/perspective';
++import { ServerRespond } from './DataStreamer';
++import './Graph.css';
++
++/**
++ * Props declaration for <Graph />
++ */
++interface IProps {
++  data: ServerRespond[],
++}
++
++/**
++ * Perspective library adds load to HTMLElement prototype.
++ * This interface acts as a wrapper for Typescript compiler.
++ */
++interface PerspectiveViewerElement extends HTMLElement {
++  load: (table: Table) => void,
++}
++
++/**
++ * React component that renders Perspective based on data
++ * parsed from its parent through data property.
++ */
++class Graph extends Component<IProps, {}> {
++  // Perspective table
++  table: Table | undefined;
++
++  render() {
++    return React.createElement('perspective-viewer');
++  }
++
++  componentDidMount() {
++    console.log('rendering');
++    // Get element to attach the table from the DOM.
++    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++
++    const schema = {
++      stock: 'string',
++      top_ask_price: 'float',
++      top_bid_price: 'float',
++      timestamp: 'date',
++    };
++
++    if (window.perspective) {
++      this.table = window.perspective.worker().table(schema);
++    }
++    if (this.table) {
++      console.log('change table');
++      // Load the `table` in the `<perspective-viewer>` DOM reference.
++
++      // Add more Perspective configurations here.
++      elem.load(this.table);
++      elem.setAttribute('view', 'y_line');
++      elem.setAttribute('column-pivots', '["stock"]');
++      elem.setAttribute('row-pivots', '["timestamp"]');
++      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('aggregates', '{"stock":"distinct count","top_ask_price":"avg","top_bid_price":"avg","timestamp":"distinct count"}');
++      
++    }
++  }
++
++  componentDidUpdate() {
++    // Everytime the data props is updated, insert the data into Perspective table
++    if (this.table) {
++      // As part of the task, you need to fix the way we update the data props to
++      // avoid inserting duplicated entries into Perspective table again.
++      this.table.update(this.props.data.map((el: any) => {
++        // Format the data from ServerRespond to the schema
++        return {
++          stock: el.stock,
++          top_ask_price: el.top_ask && el.top_ask.price || 0,
++          top_bid_price: el.top_bid && el.top_bid.price || 0,
++          timestamp: el.timestamp,
++        };
++      }));
++    }
++  }
++}
++
++export default Graph;
+diff --git a/index.css b/index.css
+new file mode 100644
+index 0000000..cee5f34
+--- /dev/null
++++ b/index.css
+@@ -0,0 +1,14 @@
++body {
++  margin: 0;
++  padding: 0;
++  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
++    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
++    sans-serif;
++  -webkit-font-smoothing: antialiased;
++  -moz-osx-font-smoothing: grayscale;
++}
++
++code {
++  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
++    monospace;
++}
+diff --git a/index.tsx b/index.tsx
+new file mode 100644
+index 0000000..6e7a3f1
+--- /dev/null
++++ b/index.tsx
+@@ -0,0 +1,14 @@
++import React from 'react';
++import ReactDOM from 'react-dom';
++import App from './App';
++import './index.css';
++import 'bootstrap/dist/css/bootstrap.css';
++
++declare global {
++  interface Window { perspective: any; }
++}
++
++/**
++ * React App attaches the DOM to the DOM element #root in public/index.html
++ */
++ReactDOM.render(<App />, document.getElementById('root'));
+diff --git a/react-app-env.d.ts b/react-app-env.d.ts
+new file mode 100644
+index 0000000..6431bc5
+--- /dev/null
++++ b/react-app-env.d.ts
+@@ -0,0 +1 @@
++/// <reference types="react-scripts" />
+-- 
+2.26.2.windows.1
+
